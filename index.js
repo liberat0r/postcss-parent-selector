@@ -16,13 +16,13 @@ function isNonRelevantRule (rule) {
  *
  * @param selectors
  * @param ignoredSelectors
- * @param startsWith
+ * @param compareStartsWith
  * @returns {boolean}
  */
-function hasIgnoredSelectors (selectors, ignoredSelectors, startsWith) {
+function hasIgnoredSelectors (selectors, ignoredSelectors, compareStartsWith) {
     return selectors.some(selector =>
         ignoredSelectors.find(ignored => {
-            if (startsWith) return selector.startsWith(ignored);
+            if (compareStartsWith) return selector.startsWith(ignored);
             return ignored === selector;
         }));
 }
@@ -31,24 +31,15 @@ function hasIgnoredSelectors (selectors, ignoredSelectors, startsWith) {
  * Is ignored rule
  *
  * @param rule
- * @param ignoredSelectors
- * @returns {*|boolean}
+ * @param opts
+ * @returns {boolean}
  */
-function isIgnoredRule (rule, ignoredSelectors) {
-    return ignoredSelectors && ignoredSelectors.length &&
-        hasIgnoredSelectors(rule.selectors, ignoredSelectors);
-}
-
-/**
- * Is ignored rule (.startsWith)
- *
- * @param rule
- * @param ignoredStartsWithSelectors
- * @returns {*|boolean}
- */
-function isIgnoredStartsWithRule (rule, ignoredStartsWithSelectors) {
-    return ignoredStartsWithSelectors && ignoredStartsWithSelectors.length &&
-        hasIgnoredSelectors(rule.selectors, ignoredStartsWithSelectors, true);
+function isIgnoredRule (rule, opts) {
+    const isIgnored = opts.ignoredSelectors && opts.ignoredSelectors.length &&
+        hasIgnoredSelectors(rule.selectors, opts.ignoredSelectors);
+    const isIgnoredStartsWith = opts.ignoredSelectorsStartsWith && opts.ignoredSelectorsStartsWith.length &&
+        hasIgnoredSelectors(rule.selectors, opts.ignoredSelectorsStartsWith, true);
+    return isIgnored || isIgnoredStartsWith;
 }
 
 module.exports = postcss.plugin('postcss-parent-selector', function (opts) {
@@ -58,8 +49,7 @@ module.exports = postcss.plugin('postcss-parent-selector', function (opts) {
     return function (root /* , result*/) {
         root.walkRules(rule => {
             if (isNonRelevantRule(rule) ||
-                isIgnoredRule(rule, opts.ignoredSelectors) ||
-                isIgnoredStartsWithRule(rule, opts.ignoredStartsWithSelectors)) {
+                isIgnoredRule(rule, opts)) {
                 return;
             }
             rule.selectors = rule.selectors.map(selectors => {
